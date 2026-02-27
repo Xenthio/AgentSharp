@@ -16,6 +16,11 @@ public interface IBackendProvider
     IAsyncEnumerable<CompletionStreamChunk> GenerateCompletionStreamAsync(
         CompletionRequest request,
         CancellationToken cancellationToken = default);
+        
+    Task<float[]> GenerateEmbeddingAsync(
+        string input,
+        string model = "google/gemini-embedding-001",
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class CompletionStreamChunk

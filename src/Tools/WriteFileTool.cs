@@ -17,7 +17,7 @@ public sealed class WriteFileTool : ITool
     }
 
     public string Name => "write_file";
-    public string Description => "Write or overwrite a file. Provide the relative path from the root of the AIPlayground_Projects addon (e.g. `lua/ai_projects/my_weapon/shared.lua`).";
+    public string Description => "Write or overwrite a file. Provide the relative path from the root of your virtual addons folder (e.g. `my_cool_addon/lua/weapons/weapon_cool.lua`).";
 
     public object Parameters => JsonNode.Parse("""
     {
@@ -25,7 +25,7 @@ public sealed class WriteFileTool : ITool
         "properties": {
             "path": {
                 "type": "string",
-                "description": "Relative path to write to (e.g., lua/ai_projects/my_project/shared.lua)"
+                "description": "Relative path to write to (e.g. my_cool_addon/lua/weapons/weapon_cool.lua)"
             },
             "content": {
                 "type": "string",
@@ -43,6 +43,14 @@ public sealed class WriteFileTool : ITool
             var root = arguments.RootElement;
             var path = root.GetProperty("path").GetString() ?? "";
             var content = root.GetProperty("content").GetString() ?? "";
+
+            // Modify the path to automatically inject the `~` prefix for the root folder
+            var parts = path.Split('/', '\\');
+            if (parts.Length > 0 && !parts[0].StartsWith("~"))
+            {
+                parts[0] = "~" + parts[0];
+                path = string.Join(Path.DirectorySeparatorChar, parts);
+            }
 
             // Security: Prevent directory traversal
             var fullPath = Path.GetFullPath(Path.Combine(_workspacePath, path));

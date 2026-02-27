@@ -183,6 +183,34 @@ public sealed class OpenRouterBackend : IBackendProvider
         }
     }
 
+    public async Task<float[]> GenerateEmbeddingAsync(
+        string input,
+        string model = "google/gemini-embedding-001",
+        CancellationToken cancellationToken = default)
+    {
+        var req = new OpenRouterEmbeddingRequest
+        {
+            Model = model,
+            Input = input
+        };
+
+        var requestMsg = new HttpRequestMessage(HttpMethod.Post, "embeddings")
+        {
+            Content = JsonContent.Create(req, OpenRouterEmbeddingJsonContext.Default.OpenRouterEmbeddingRequest)
+        };
+
+        using var response = await _client.SendAsync(requestMsg, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var res = await response.Content.ReadFromJsonAsync(OpenRouterEmbeddingJsonContext.Default.OpenRouterEmbeddingResponse, cancellationToken);
+        if (res?.Data != null && res.Data.Length > 0 && res.Data[0].Embedding != null)
+        {
+            return res.Data[0].Embedding!;
+        }
+
+        throw new InvalidOperationException("Embedding response missing data.");
+    }
+
     private static OpenRouterMessage ConvertMessage(ChatMessage msg)
     {
         return new OpenRouterMessage
