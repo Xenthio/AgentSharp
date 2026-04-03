@@ -102,11 +102,26 @@ public sealed class TextCompletionBackend : IBackendProvider
         }
     }
 
-    public Task<float[]> GenerateEmbeddingAsync(
+    public async Task<float[]> GenerateEmbeddingAsync(
         string input,
-        string model = "google/gemini-embedding-001",
+        string model = "nomic-embed-text",
         CancellationToken cancellationToken = default)
-        => throw new NotSupportedException($"[{Name}] Embeddings not supported on text-completion backend.");
+    {
+        // Oobabooga exposes /v1/embeddings — try it, throw descriptive error if unavailable
+        var req = new TcEmbeddingRequest { Model = model, Input = input };
+        var resp = await _client.PostAsJsonAsync("v1/embeddings", req,
+            TextCompletionJsonContext.Default.TcEmbeddingRequest, cancellationToken);
+
+        var raw = await resp.Content.ReadAsStringAsync(cancellationToken);
+        if (!resp.IsSuccessStatusCode)
+            throw new Exception($"[{Name}] Embedding API Error ({resp.StatusCode}): {raw}");
+
+        var result = JsonSerializer.Deserialize(raw, TextCompletionJsonContext.Default.TcEmbeddingResponse);
+        if (result?.Data == null || result.Data.Length == 0 || result.Data[0].Embedding == null)
+            throw new InvalidOperationException($"[{Name}] Embedding response missing data.");
+
+        return result.Data[0].Embedding!;
+    }
 
     /// <summary>
     /// Builds a flat text prompt from chat messages.
@@ -177,8 +192,26 @@ internal sealed class TcUsage
     [JsonPropertyName("completion_tokens")] public int CompletionTokens { get; init; }
 }
 
+internal sealed class TcEmbeddingRequest
+{
+    [JsonPropertyName("model")] public required string Model { get; init; }
+    [JsonPropertyName("input")] public required string Input { get; init; }
+}
+
+internal sealed class TcEmbeddingResponse
+{
+    [JsonPropertyName("data")] public TcEmbeddingData[]? Data { get; init; }
+}
+
+internal sealed class TcEmbeddingData
+{
+    [JsonPropertyName("embedding")] public float[]? Embedding { get; init; }
+}
+
 [JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(TcRequest))]
 [JsonSerializable(typeof(TcResponse))]
 [JsonSerializable(typeof(TcStreamResponse))]
+[JsonSerializable(typeof(TcEmbeddingRequest))]
+[JsonSerializable(typeof(TcEmbeddingResponse))]
 internal partial class TextCompletionJsonContext : JsonSerializerContext { }

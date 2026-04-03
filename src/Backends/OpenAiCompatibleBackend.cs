@@ -109,11 +109,25 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
         }
     }
 
-    public Task<float[]> GenerateEmbeddingAsync(
+    public async Task<float[]> GenerateEmbeddingAsync(
         string input,
-        string model = "google/gemini-embedding-001",
+        string model = "nomic-embed-text",
         CancellationToken cancellationToken = default)
-        => throw new NotSupportedException($"[{Name}] Embeddings not supported on generic OpenAI-compatible backend.");
+    {
+        var req = new OaiEmbeddingRequest { Model = model, Input = input };
+        var resp = await _client.PostAsJsonAsync("v1/embeddings", req,
+            OaiCompatJsonContext.Default.OaiEmbeddingRequest, cancellationToken);
+
+        var raw = await resp.Content.ReadAsStringAsync(cancellationToken);
+        if (!resp.IsSuccessStatusCode)
+            throw new Exception($"[{Name}] Embedding API Error ({resp.StatusCode}): {raw}");
+
+        var result = JsonSerializer.Deserialize(raw, OaiCompatJsonContext.Default.OaiEmbeddingResponse);
+        if (result?.Data == null || result.Data.Length == 0 || result.Data[0].Embedding == null)
+            throw new InvalidOperationException($"[{Name}] Embedding response missing data.");
+
+        return result.Data[0].Embedding!;
+    }
 
     public async Task<bool> IsAvailableAsync()
     {
@@ -205,10 +219,28 @@ internal sealed class OaiUsage
     [JsonPropertyName("completion_tokens")] public int CompletionTokens { get; init; }
 }
 
+internal sealed class OaiEmbeddingRequest
+{
+    [JsonPropertyName("model")] public required string Model { get; init; }
+    [JsonPropertyName("input")] public required string Input { get; init; }
+}
+
+internal sealed class OaiEmbeddingResponse
+{
+    [JsonPropertyName("data")] public OaiEmbeddingData[]? Data { get; init; }
+}
+
+internal sealed class OaiEmbeddingData
+{
+    [JsonPropertyName("embedding")] public float[]? Embedding { get; init; }
+}
+
 [JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(OaiRequest))]
 [JsonSerializable(typeof(OaiResponse))]
 [JsonSerializable(typeof(OaiStreamResponse))]
+[JsonSerializable(typeof(OaiEmbeddingRequest))]
+[JsonSerializable(typeof(OaiEmbeddingResponse))]
 [JsonSerializable(typeof(System.Text.Json.Nodes.JsonObject))]
 [JsonSerializable(typeof(System.Text.Json.Nodes.JsonArray))]
 [JsonSerializable(typeof(System.Text.Json.Nodes.JsonNode))]
