@@ -167,9 +167,17 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
             }
             return new OaiMessage { Role = m.Role, Content = content };
         }).ToArray(),
-        MaxTokens = request.MaxTokens,
+        MaxTokens   = request.MaxTokens,
         Temperature = request.Temperature,
-        Stream = stream ? true : null
+        Stream      = stream ? true : null,
+        MinP          = request.MinP > 0 ? request.MinP : null,
+        TopK          = request.TopK > 0 ? request.TopK : null,
+        TopP          = request.TopP < 1.0 ? request.TopP : null,
+        RepeatPenalty = request.RepeatPenalty != 1.0 ? request.RepeatPenalty : null,
+        Seed          = request.Seed >= 0 ? request.Seed : null,
+        Thinking      = request.EnableThinking
+            ? new JsonObject { ["type"] = "enabled", ["budget_tokens"] = request.ThinkingBudget > 0 ? request.ThinkingBudget : 2048 }
+            : null,
     };
 }
 
@@ -177,11 +185,17 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
 
 internal sealed class OaiRequest
 {
-    [JsonPropertyName("model")] public required string Model { get; init; }
-    [JsonPropertyName("messages")] public required OaiMessage[] Messages { get; init; }
-    [JsonPropertyName("max_tokens")] public int MaxTokens { get; init; }
+    [JsonPropertyName("model")]       public required string Model { get; init; }
+    [JsonPropertyName("messages")]    public required OaiMessage[] Messages { get; init; }
+    [JsonPropertyName("max_tokens")]  public int MaxTokens { get; init; }
     [JsonPropertyName("temperature")] public double Temperature { get; init; }
-    [JsonPropertyName("stream")] public bool? Stream { get; init; }
+    [JsonPropertyName("stream")]      public bool? Stream { get; init; }
+    [JsonPropertyName("min_p")]           public double? MinP { get; init; }
+    [JsonPropertyName("top_k")]           public int? TopK { get; init; }
+    [JsonPropertyName("top_p")]           public double? TopP { get; init; }
+    [JsonPropertyName("repeat_penalty")]  public double? RepeatPenalty { get; init; }
+    [JsonPropertyName("seed")]            public int? Seed { get; init; }
+    [JsonPropertyName("thinking")]        public JsonNode? Thinking { get; init; }
 }
 
 internal sealed class OaiMessage

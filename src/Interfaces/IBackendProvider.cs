@@ -36,9 +36,20 @@ public sealed class CompletionRequest
 {
     public required string Model { get; init; }
     public required List<ChatMessage> Messages { get; init; }
-    public double Temperature { get; init; } = 0.7;
-    public int MaxTokens { get; init; } = 4096;
+    public double Temperature   { get; init; } = 0.7;
+    public int    MaxTokens     { get; init; } = 4096;
     public List<ToolDefinition>? Tools { get; init; }
+
+    // Generation sampling parameters (0/default = use model default)
+    public double MinP          { get; init; } = 0.0;
+    public int    TopK          { get; init; } = 0;
+    public double TopP          { get; init; } = 1.0;
+    public double RepeatPenalty { get; init; } = 1.0;
+    public int    Seed          { get; init; } = -1;
+
+    // Thinking / extended reasoning
+    public bool EnableThinking  { get; init; } = false;
+    public int  ThinkingBudget  { get; init; } = 0;
 }
 
 public sealed class ChatMessage
