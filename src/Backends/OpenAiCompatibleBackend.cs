@@ -139,6 +139,20 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
         catch { return false; }
     }
 
+    /// <summary>
+    /// LM Studio requires plain base64 without "data:mime;base64," prefix.
+    /// Strip it if present so we work with both LM Studio and standard OpenAI.
+    /// </summary>
+    private static string StripDataPrefix(string url)
+    {
+        if (url.StartsWith("data:") && url.Contains(";base64,"))
+        {
+            var idx = url.IndexOf(";base64,");
+            return url[(idx + 8)..]; // everything after ";base64,"
+        }
+        return url;
+    }
+
     private OaiRequest BuildPayload(CompletionRequest request, bool stream) => new()
     {
         Model = _model ?? request.Model,
@@ -156,7 +170,13 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
                         arr.Add(new JsonObject
                         {
                             ["type"] = "image_url",
-                            ["image_url"] = new JsonObject { ["url"] = part.ImageUrl.Url, ["detail"] = part.ImageUrl.Detail }
+                            // LM Studio requires plain base64 without "data:mime;base64," prefix
+                            // Strip the prefix if present so both LM Studio and OpenAI are handled
+                            ["image_url"] = new JsonObject
+                            {
+                                ["url"] = StripDataPrefix(part.ImageUrl.Url),
+                                ["detail"] = part.ImageUrl.Detail
+                            }
                         });
                 }
                 content = arr;
