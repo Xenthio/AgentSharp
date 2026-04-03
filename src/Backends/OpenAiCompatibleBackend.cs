@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using AgentSharp.Core.Interfaces;
 
@@ -53,7 +54,7 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
         var choice = apiResp.Choices[0];
         return new CompletionResponse
         {
-            Content = choice.Message?.Content ?? string.Empty,
+            Content = choice.Message?.Content?.ToString() ?? string.Empty,
             FinishReason = choice.FinishReason ?? "stop",
             Usage = new TokenUsage
             {
@@ -102,7 +103,7 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
 
             yield return new CompletionStreamChunk
             {
-                ContentDelta = delta.Content,
+                ContentDelta = delta.Content?.ToString(),
                 FinishReason = chunk.Choices[0].FinishReason
             };
         }
@@ -127,10 +128,30 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
     private OaiRequest BuildPayload(CompletionRequest request, bool stream) => new()
     {
         Model = _model ?? request.Model,
-        Messages = request.Messages.Select(m => new OaiMessage
+        Messages = request.Messages.Select(m =>
         {
-            Role = m.Role,
-            Content = m.Content
+            JsonNode? content;
+            if (m.ContentParts != null)
+            {
+                var arr = new JsonArray();
+                foreach (var part in m.ContentParts)
+                {
+                    if (part.Type == "text")
+                        arr.Add(new JsonObject { ["type"] = "text", ["text"] = part.Text });
+                    else if (part.Type == "image_url" && part.ImageUrl != null)
+                        arr.Add(new JsonObject
+                        {
+                            ["type"] = "image_url",
+                            ["image_url"] = new JsonObject { ["url"] = part.ImageUrl.Url, ["detail"] = part.ImageUrl.Detail }
+                        });
+                }
+                content = arr;
+            }
+            else
+            {
+                content = m.Content;
+            }
+            return new OaiMessage { Role = m.Role, Content = content };
         }).ToArray(),
         MaxTokens = request.MaxTokens,
         Temperature = request.Temperature,
@@ -152,7 +173,7 @@ internal sealed class OaiRequest
 internal sealed class OaiMessage
 {
     [JsonPropertyName("role")] public required string Role { get; init; }
-    [JsonPropertyName("content")] public required string Content { get; init; }
+    [JsonPropertyName("content")] public required JsonNode? Content { get; init; }
 }
 
 internal sealed class OaiResponse
@@ -188,4 +209,8 @@ internal sealed class OaiUsage
 [JsonSerializable(typeof(OaiRequest))]
 [JsonSerializable(typeof(OaiResponse))]
 [JsonSerializable(typeof(OaiStreamResponse))]
+[JsonSerializable(typeof(System.Text.Json.Nodes.JsonObject))]
+[JsonSerializable(typeof(System.Text.Json.Nodes.JsonArray))]
+[JsonSerializable(typeof(System.Text.Json.Nodes.JsonNode))]
+[JsonSerializable(typeof(System.Text.Json.Nodes.JsonValue))]
 internal partial class OaiCompatJsonContext : JsonSerializerContext { }

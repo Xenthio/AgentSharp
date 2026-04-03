@@ -111,16 +111,24 @@ public sealed class TextCompletionBackend : IBackendProvider
     /// <summary>
     /// Builds a flat text prompt from chat messages.
     /// System message is prepended as-is; then [Author]: Content lines follow.
+    /// Images in ContentParts are ignored (not supported in text-completion mode).
     /// </summary>
     private static string BuildPrompt(CompletionRequest request)
     {
         var sb = new System.Text.StringBuilder();
         foreach (var m in request.Messages)
         {
-            if (m.Role == "system")
-                sb.AppendLine(m.Content);
+            // Extract text content (ignore image parts)
+            string text;
+            if (m.ContentParts != null)
+                text = string.Concat(m.ContentParts.Where(p => p.Type == "text").Select(p => p.Text ?? ""));
             else
-                sb.AppendLine($"[{m.Role}]: {m.Content}");
+                text = m.Content;
+
+            if (m.Role == "system")
+                sb.AppendLine(text);
+            else
+                sb.AppendLine($"[{m.Role}]: {text}");
         }
         return sb.ToString();
     }

@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using AgentSharp.Core.Interfaces;
 
@@ -79,7 +80,7 @@ public sealed class OpenRouterBackend : IBackendProvider
 
         return new CompletionResponse
         {
-            Content = choice.Message.Content ?? string.Empty,
+            Content = choice.Message.Content?.ToString() ?? string.Empty,
             ToolCalls = toolCalls,
             Usage = new TokenUsage
             {
@@ -213,10 +214,44 @@ public sealed class OpenRouterBackend : IBackendProvider
 
     private static OpenRouterMessage ConvertMessage(ChatMessage msg)
     {
+        JsonNode? content;
+        if (msg.ContentParts != null)
+        {
+            var arr = new JsonArray();
+            foreach (var part in msg.ContentParts)
+            {
+                if (part.Type == "text")
+                {
+                    arr.Add(new JsonObject
+                    {
+                        ["type"] = "text",
+                        ["text"] = part.Text
+                    });
+                }
+                else if (part.Type == "image_url" && part.ImageUrl != null)
+                {
+                    arr.Add(new JsonObject
+                    {
+                        ["type"] = "image_url",
+                        ["image_url"] = new JsonObject
+                        {
+                            ["url"] = part.ImageUrl.Url,
+                            ["detail"] = part.ImageUrl.Detail
+                        }
+                    });
+                }
+            }
+            content = arr;
+        }
+        else
+        {
+            content = msg.Content;
+        }
+
         return new OpenRouterMessage
         {
             Role = msg.Role,
-            Content = msg.Content,
+            Content = content,
             Name = msg.Name,
             ToolCallId = msg.ToolCallId,
             ToolCalls = msg.ToolCalls?.Select(tc => new OpenRouterToolCall
@@ -357,7 +392,7 @@ internal sealed class OpenRouterMessage
     public string? Role { get; init; }
 
     [JsonPropertyName("content")]
-    public string? Content { get; init; }
+    public JsonNode? Content { get; init; }
 
     [JsonPropertyName("name")]
     public string? Name { get; init; }
@@ -429,6 +464,9 @@ internal sealed class OpenRouterUsage
 [JsonSerializable(typeof(OpenRouterStreamResponse))]
 [JsonSerializable(typeof(ToolDefinition))]
 [JsonSerializable(typeof(System.Text.Json.Nodes.JsonObject))]
+[JsonSerializable(typeof(System.Text.Json.Nodes.JsonArray))]
+[JsonSerializable(typeof(System.Text.Json.Nodes.JsonNode))]
+[JsonSerializable(typeof(System.Text.Json.Nodes.JsonValue))]
 internal partial class OpenRouterJsonContext : JsonSerializerContext
 {
 }

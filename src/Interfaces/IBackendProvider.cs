@@ -48,12 +48,45 @@ public sealed class ChatMessage
     public string? Name { get; init; }
     public List<ToolCall>? ToolCalls { get; init; }
     public string? ToolCallId { get; init; }
+    public List<ChatContentPart>? ContentParts { get; init; }
 
     public static ChatMessage User(string text) => new() { Role = "user", Content = text };
     public static ChatMessage System(string text) => new() { Role = "system", Content = text };
     public static ChatMessage Assistant(string text) => new() { Role = "assistant", Content = text };
     public static ChatMessage AssistantTools(List<ToolCall> tools) => new() { Role = "assistant", Content = "", ToolCalls = tools };
     public static ChatMessage ToolResult(string id, string result) => new() { Role = "tool", ToolCallId = id, Content = result };
+
+    /// <summary>
+    /// Creates a user message with multimodal content (text + images).
+    /// </summary>
+    public static ChatMessage UserWithImages(string text, params ChatContentPart[] parts)
+    {
+        var allParts = new List<ChatContentPart> { ChatContentPart.FromText(text) };
+        allParts.AddRange(parts);
+        return new() { Role = "user", Content = text, ContentParts = allParts };
+    }
+}
+
+/// <summary>
+/// A single part of a multimodal message content array.
+/// </summary>
+public sealed class ChatContentPart
+{
+    public required string Type { get; init; }  // "text" or "image_url"
+    public string? Text { get; init; }
+    public ChatImageUrl? ImageUrl { get; init; }
+
+    public static ChatContentPart FromText(string text) => new() { Type = "text", Text = text };
+    public static ChatContentPart FromImageUrl(string url, string detail = "auto") =>
+        new() { Type = "image_url", ImageUrl = new ChatImageUrl { Url = url, Detail = detail } };
+    public static ChatContentPart FromBase64Image(byte[] data, string mimeType = "image/jpeg", string detail = "auto") =>
+        FromImageUrl($"data:{mimeType};base64,{Convert.ToBase64String(data)}", detail);
+}
+
+public sealed class ChatImageUrl
+{
+    public required string Url { get; init; }
+    public string Detail { get; init; } = "auto";  // "auto" | "low" | "high"
 }
 
 public sealed class ToolCall
