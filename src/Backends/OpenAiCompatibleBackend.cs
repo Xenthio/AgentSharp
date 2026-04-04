@@ -167,17 +167,19 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
                     if (part.Type == "text")
                         arr.Add(new JsonObject { ["type"] = "text", ["text"] = part.Text });
                     else if (part.Type == "image_url" && part.ImageUrl != null)
+                    {
+                        var strippedUrl = StripDataPrefix(part.ImageUrl.Url);
+                        Console.WriteLine($"[Vision] Sending image, url starts with: {strippedUrl[..Math.Min(30, strippedUrl.Length)]}...");
+                        var imgObj = new JsonObject { ["url"] = strippedUrl };
+                        // Only include detail if non-default — some servers reject unknown fields
+                        if (part.ImageUrl.Detail != "auto")
+                            imgObj["detail"] = part.ImageUrl.Detail;
                         arr.Add(new JsonObject
                         {
-                            ["type"] = "image_url",
-                            // LM Studio requires plain base64 without "data:mime;base64," prefix
-                            // Strip the prefix if present so both LM Studio and OpenAI are handled
-                            ["image_url"] = new JsonObject
-                            {
-                                ["url"] = StripDataPrefix(part.ImageUrl.Url),
-                                ["detail"] = part.ImageUrl.Detail
-                            }
+                            ["type"]      = "image_url",
+                            ["image_url"] = imgObj
                         });
+                    }
                 }
                 content = arr;
             }
