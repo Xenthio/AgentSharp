@@ -168,10 +168,11 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
                         arr.Add(new JsonObject { ["type"] = "text", ["text"] = part.Text });
                     else if (part.Type == "image_url" && part.ImageUrl != null)
                     {
-                        var strippedUrl = StripDataPrefix(part.ImageUrl.Url);
-                        Console.WriteLine($"[Vision] Sending image, url starts with: {strippedUrl[..Math.Min(30, strippedUrl.Length)]}...");
-                        var imgObj = new JsonObject { ["url"] = strippedUrl };
-                        // Only include detail if non-default — some servers reject unknown fields
+                        // Gemma 4 and most vision models require full data: URL format
+                        // e.g. data:image/png;base64,iVBORw0K...
+                        var url = part.ImageUrl.Url;
+                        Console.WriteLine($"[Vision] Sending image, url starts with: {url[..Math.Min(40, url.Length)]}...");
+                        var imgObj = new JsonObject { ["url"] = url };
                         if (part.ImageUrl.Detail != "auto")
                             imgObj["detail"] = part.ImageUrl.Detail;
                         arr.Add(new JsonObject
