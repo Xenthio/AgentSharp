@@ -198,9 +198,12 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
         TopP          = request.TopP < 1.0 ? request.TopP : null,
         RepeatPenalty = request.RepeatPenalty != 1.0 ? request.RepeatPenalty : null,
         Seed          = request.Seed >= 0 ? request.Seed : null,
+        // Anthropic-style thinking (Claude, some other models)
         Thinking      = request.EnableThinking
             ? new JsonObject { ["type"] = "enabled", ["budget_tokens"] = request.ThinkingBudget > 0 ? request.ThinkingBudget : 2048 }
             : null,
+        // Qwen 3 style: enable_thinking as top-level bool (false to disable)
+        EnableThinking = request.EnableThinking ? null : (bool?)false,
     };
 }
 
@@ -219,6 +222,7 @@ internal sealed class OaiRequest
     [JsonPropertyName("repeat_penalty")]  public double? RepeatPenalty { get; init; }
     [JsonPropertyName("seed")]            public int? Seed { get; init; }
     [JsonPropertyName("thinking")]        public JsonNode? Thinking { get; init; }
+    [JsonPropertyName("enable_thinking")] public bool? EnableThinking { get; init; }
 }
 
 internal sealed class OaiMessage
