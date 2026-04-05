@@ -50,6 +50,8 @@ public sealed class CompletionRequest
     // Thinking / extended reasoning
     public bool EnableThinking  { get; init; } = false;
     public int  ThinkingBudget  { get; init; } = 0;
+    /// <summary>Token ID → logit bias (-100 to 100). Use to ban or boost specific tokens.</summary>
+    public Dictionary<string, float>? LogitBias { get; init; }
 }
 
 public sealed class ChatMessage

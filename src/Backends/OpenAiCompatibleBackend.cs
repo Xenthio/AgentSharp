@@ -204,6 +204,7 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
             : null,
         // Qwen 3 style: enable_thinking as top-level bool (false to disable)
         EnableThinking = request.EnableThinking ? null : (bool?)false,
+        LogitBias      = request.LogitBias != null && request.LogitBias.Count > 0 ? request.LogitBias : null,
     };
 }
 
@@ -223,6 +224,7 @@ internal sealed class OaiRequest
     [JsonPropertyName("seed")]            public int? Seed { get; init; }
     [JsonPropertyName("thinking")]        public JsonNode? Thinking { get; init; }
     [JsonPropertyName("enable_thinking")] public bool? EnableThinking { get; init; }
+    [JsonPropertyName("logit_bias")]       public Dictionary<string, float>? LogitBias { get; init; }
 }
 
 internal sealed class OaiMessage
