@@ -135,6 +135,25 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
         return result.Data[0].Embedding!;
     }
 
+    public async Task<int> CountTokensAsync(string text, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var payload = new { model = "local", input = text };
+            var resp = await _client.PostAsJsonAsync("v1/tokenize", payload, cancellationToken);
+            if (!resp.IsSuccessStatusCode) return -1;
+            var raw = await resp.Content.ReadAsStringAsync(cancellationToken);
+            using var doc = System.Text.Json.JsonDocument.Parse(raw);
+            // LM Studio returns { "tokens": [...], "token_count": N } or { "count": N }
+            if (doc.RootElement.TryGetProperty("token_count", out var countEl) && countEl.TryGetInt32(out var n)) return n;
+            if (doc.RootElement.TryGetProperty("count", out var countEl2) && countEl2.TryGetInt32(out var n2)) return n2;
+            if (doc.RootElement.TryGetProperty("tokens", out var tokensEl) && tokensEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                return tokensEl.GetArrayLength();
+            return -1;
+        }
+        catch { return -1; }
+    }
+
     public async Task<bool> IsAvailableAsync()
     {
         try

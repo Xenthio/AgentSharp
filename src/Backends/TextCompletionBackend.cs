@@ -123,6 +123,9 @@ public sealed class TextCompletionBackend : IBackendProvider
         return result.Data[0].Embedding!;
     }
 
+    public Task<int> CountTokensAsync(string text, CancellationToken cancellationToken = default)
+        => Task.FromResult(-1); // Text completion backend doesn't support tokenization
+
     /// <summary>
     /// Builds a flat text prompt from chat messages.
     /// System message is prepended as-is; then [Author]: Content lines follow.

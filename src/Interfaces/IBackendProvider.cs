@@ -21,6 +21,12 @@ public interface IBackendProvider
         string input,
         string model = "google/gemini-embedding-001",
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Count the number of tokens in a string using the backend's tokenizer.
+    /// Returns -1 if the backend does not support tokenization.
+    /// </summary>
+    Task<int> CountTokensAsync(string text, CancellationToken cancellationToken = default);
 }
 
 public sealed class CompletionStreamChunk

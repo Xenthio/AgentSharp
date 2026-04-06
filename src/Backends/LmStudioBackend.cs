@@ -50,6 +50,12 @@ public sealed class LmStudioBackend : IBackendProvider
         return await _impl!.GenerateEmbeddingAsync(input, model, cancellationToken);
     }
 
+    public async Task<int> CountTokensAsync(string text, CancellationToken cancellationToken = default)
+    {
+        await EnsureImplAsync(cancellationToken);
+        return await _impl!.CountTokensAsync(text, cancellationToken);
+    }
+
     public async Task<bool> IsAvailableAsync()
     {
         try

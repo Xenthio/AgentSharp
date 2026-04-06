@@ -212,6 +212,9 @@ public sealed class OpenRouterBackend : IBackendProvider
         throw new InvalidOperationException("Embedding response missing data.");
     }
 
+    public Task<int> CountTokensAsync(string text, CancellationToken cancellationToken = default)
+        => Task.FromResult(-1); // OpenRouter doesn't expose a tokenize endpoint
+
     private static OpenRouterMessage ConvertMessage(ChatMessage msg)
     {
         JsonNode? content;
