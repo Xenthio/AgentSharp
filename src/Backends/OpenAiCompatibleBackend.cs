@@ -40,6 +40,9 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
         CancellationToken cancellationToken = default)
     {
         var payload = BuildPayload(request, stream: false);
+        var payloadJson = JsonSerializer.Serialize(payload, OaiCompatJsonContext.Default.OaiRequest);
+        Console.WriteLine($"[{Name}] Request payload: {payloadJson}");
+        
         var resp = await _client.PostAsJsonAsync("v1/chat/completions", payload,
             OaiCompatJsonContext.Default.OaiRequest, cancellationToken);
 
@@ -70,6 +73,9 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var payload = BuildPayload(request, stream: true);
+        var payloadJson = JsonSerializer.Serialize(payload, OaiCompatJsonContext.Default.OaiRequest);
+        Console.WriteLine($"[{Name}] Request payload: {payloadJson}");
+        
         var reqMsg = new HttpRequestMessage(HttpMethod.Post, "v1/chat/completions")
         {
             Content = JsonContent.Create(payload, OaiCompatJsonContext.Default.OaiRequest)
