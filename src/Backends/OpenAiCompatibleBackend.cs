@@ -41,7 +41,7 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
     {
         var payload = BuildPayload(request, stream: false);
         var payloadJson = JsonSerializer.Serialize(payload, OaiCompatJsonContext.Default.OaiRequest);
-        Console.WriteLine($"[{Name}] Request payload: {payloadJson}");
+        // Uncomment to debug sampling params: Console.WriteLine($"[{Name}] Request payload: {payloadJson}");
         
         var resp = await _client.PostAsJsonAsync("v1/chat/completions", payload,
             OaiCompatJsonContext.Default.OaiRequest, cancellationToken);
@@ -74,7 +74,7 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
     {
         var payload = BuildPayload(request, stream: true);
         var payloadJson = JsonSerializer.Serialize(payload, OaiCompatJsonContext.Default.OaiRequest);
-        Console.WriteLine($"[{Name}] Request payload: {payloadJson}");
+        // Uncomment to debug sampling params: Console.WriteLine($"[{Name}] Request payload: {payloadJson}");
         
         var reqMsg = new HttpRequestMessage(HttpMethod.Post, "v1/chat/completions")
         {
