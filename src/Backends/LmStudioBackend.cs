@@ -70,16 +70,18 @@ public sealed class LmStudioBackend : IBackendProvider
     {
         if (_impl != null) return;
 
+        // Probe: check if /v1/chat/completions endpoint exists (no generation, just a HEAD-like check)
         bool chatOk = false;
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 
+            // Send minimal request with max_tokens=0 to avoid generating any tokens
             var testPayload = new
             {
-                model = string.Empty,
-                messages = new[] { new { role = "user", content = "hi" } },
+                model = "local",
+                messages = new[] { new { role = "user", content = "." } },
                 max_tokens = 1,
             };
             using var content = JsonContent.Create(testPayload);
