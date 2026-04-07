@@ -154,26 +154,12 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
         return result.Data[0].Embedding!;
     }
 
-    public async Task<int> CountTokensAsync(string text, CancellationToken cancellationToken = default)
+    public Task<int> CountTokensAsync(string text, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var payload = new { model = "local", input = text };
-            var resp = await _client.PostAsJsonAsync("v1/tokenize", payload, cancellationToken);
-            if (!resp.IsSuccessStatusCode) return -1;
-            var raw = await resp.Content.ReadAsStringAsync(cancellationToken);
-            using var doc = System.Text.Json.JsonDocument.Parse(raw);
-            // Check for error response (LM Studio returns 200 with error message for unsupported endpoints)
-            if (doc.RootElement.TryGetProperty("error", out _)) return -1;
-            if (doc.RootElement.TryGetProperty("Unexpected", out _)) return -1;
-            // LM Studio returns { "tokens": [...], "token_count": N } or { "count": N }
-            if (doc.RootElement.TryGetProperty("token_count", out var countEl) && countEl.TryGetInt32(out var n)) return n;
-            if (doc.RootElement.TryGetProperty("count", out var countEl2) && countEl2.TryGetInt32(out var n2)) return n2;
-            if (doc.RootElement.TryGetProperty("tokens", out var tokensEl) && tokensEl.ValueKind == System.Text.Json.JsonValueKind.Array)
-                return tokensEl.GetArrayLength();
-            return -1;
-        }
-        catch { return -1; }
+        // LM Studio doesn't expose a tokenize endpoint via REST API.
+        // Use character-based estimation: ~3.5 chars per token for English text.
+        // This is more accurate than the default 4:1 ratio for most LLM tokenizers.
+        return Task.FromResult(text.Length * 2 / 7); // ~3.5 chars per token
     }
 
     public async Task<bool> IsAvailableAsync()
