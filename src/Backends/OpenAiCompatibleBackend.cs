@@ -55,11 +55,29 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
             throw new Exception($"[{Name}] Empty response.");
 
         var choice = apiResp.Choices[0];
+        
+        // Extract tool calls if present
+        List<AgentSharp.Core.Interfaces.ToolCall>? toolCalls = null;
+        if (choice.Message?.ToolCalls != null && choice.Message.ToolCalls.Length > 0)
+        {
+            toolCalls = choice.Message.ToolCalls.Select(tc => new AgentSharp.Core.Interfaces.ToolCall
+            {
+                Id = tc.Id ?? string.Empty,
+                Type = tc.Type ?? "function",
+                Function = new AgentSharp.Core.Interfaces.ToolCallFunction
+                {
+                    Name = tc.Function?.Name ?? string.Empty,
+                    Arguments = tc.Function?.Arguments ?? "{}"
+                }
+            }).ToList();
+        }
+        
         return new CompletionResponse
         {
             Content = choice.Message?.Content?.ToString() ?? string.Empty,
             ReasoningContent = choice.Message?.ReasoningContent,
             FinishReason = choice.FinishReason ?? "stop",
+            ToolCalls = toolCalls,
             Usage = new TokenUsage
             {
                 PromptTokens = apiResp.Usage?.PromptTokens ?? 0,
@@ -266,6 +284,8 @@ internal sealed class OaiMessage
     [JsonPropertyName("content")] public required JsonNode? Content { get; init; }
     /// <summary>reasoning_content field returned by Qwen3, DeepSeek R1, etc.</summary>
     [JsonPropertyName("reasoning_content")] public string? ReasoningContent { get; init; }
+    /// <summary>tool_calls from OpenAI-compatible APIs</summary>
+    [JsonPropertyName("tool_calls")] public OaiToolCall[]? ToolCalls { get; init; }
 }
 
 internal sealed class OaiResponse
@@ -313,12 +333,27 @@ internal sealed class OaiEmbeddingData
     [JsonPropertyName("embedding")] public float[]? Embedding { get; init; }
 }
 
+internal sealed class OaiToolCall
+{
+    [JsonPropertyName("id")] public string? Id { get; init; }
+    [JsonPropertyName("type")] public string? Type { get; init; }
+    [JsonPropertyName("function")] public OaiToolCallFunction? Function { get; init; }
+}
+
+internal sealed class OaiToolCallFunction
+{
+    [JsonPropertyName("name")] public string? Name { get; init; }
+    [JsonPropertyName("arguments")] public string? Arguments { get; init; }
+}
+
 [JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(OaiRequest))]
 [JsonSerializable(typeof(OaiResponse))]
 [JsonSerializable(typeof(OaiStreamResponse))]
 [JsonSerializable(typeof(OaiEmbeddingRequest))]
 [JsonSerializable(typeof(OaiEmbeddingResponse))]
+[JsonSerializable(typeof(OaiToolCall))]
+[JsonSerializable(typeof(OaiToolCallFunction))]
 [JsonSerializable(typeof(System.Text.Json.Nodes.JsonObject))]
 [JsonSerializable(typeof(System.Text.Json.Nodes.JsonArray))]
 [JsonSerializable(typeof(System.Text.Json.Nodes.JsonNode))]
