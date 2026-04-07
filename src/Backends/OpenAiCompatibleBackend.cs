@@ -145,6 +145,9 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
             if (!resp.IsSuccessStatusCode) return -1;
             var raw = await resp.Content.ReadAsStringAsync(cancellationToken);
             using var doc = System.Text.Json.JsonDocument.Parse(raw);
+            // Check for error response (LM Studio returns 200 with error message for unsupported endpoints)
+            if (doc.RootElement.TryGetProperty("error", out _)) return -1;
+            if (doc.RootElement.TryGetProperty("Unexpected", out _)) return -1;
             // LM Studio returns { "tokens": [...], "token_count": N } or { "count": N }
             if (doc.RootElement.TryGetProperty("token_count", out var countEl) && countEl.TryGetInt32(out var n)) return n;
             if (doc.RootElement.TryGetProperty("count", out var countEl2) && countEl2.TryGetInt32(out var n2)) return n2;
@@ -224,12 +227,14 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
         TopP          = request.TopP < 1.0 ? request.TopP : null,
         RepeatPenalty = request.RepeatPenalty != 1.0 ? request.RepeatPenalty : null,
         Seed          = request.Seed >= 0 ? request.Seed : null,
-        // Anthropic-style thinking (Claude, some other models)
-        Thinking      = request.EnableThinking
-            ? new JsonObject { ["type"] = "enabled", ["budget_tokens"] = request.ThinkingBudget > 0 ? request.ThinkingBudget : 2048 }
-            : null,
-        // Qwen 3 style: enable_thinking as top-level bool (false to disable)
-        EnableThinking = request.EnableThinking ? null : (bool?)false,
+        // LM Studio reasoning field (takes precedence)
+        Reasoning      = !string.IsNullOrEmpty(request.ReasoningEffort) ? request.ReasoningEffort : null,
+        // Legacy: Anthropic-style thinking block (Claude)
+        Thinking      = (!string.IsNullOrEmpty(request.ReasoningEffort) || !request.EnableThinking) ? null
+            : new JsonObject { ["type"] = "enabled", ["budget_tokens"] = request.ThinkingBudget > 0 ? request.ThinkingBudget : 2048 },
+        // Legacy: Qwen 3 enable_thinking bool
+        EnableThinking = !string.IsNullOrEmpty(request.ReasoningEffort) ? null
+            : request.EnableThinking ? null : (bool?)false,
         LogitBias      = request.LogitBias != null && request.LogitBias.Count > 0 ? request.LogitBias : null,
     };
 }
@@ -250,6 +255,8 @@ internal sealed class OaiRequest
     [JsonPropertyName("seed")]            public int? Seed { get; init; }
     [JsonPropertyName("thinking")]        public JsonNode? Thinking { get; init; }
     [JsonPropertyName("enable_thinking")] public bool? EnableThinking { get; init; }
+    /// <summary>LM Studio reasoning setting: "off" | "low" | "medium" | "high" | "on"</summary>
+    [JsonPropertyName("reasoning")]       public string? Reasoning { get; init; }
     [JsonPropertyName("logit_bias")]       public Dictionary<string, float>? LogitBias { get; init; }
 }
 

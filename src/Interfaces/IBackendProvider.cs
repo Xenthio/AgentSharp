@@ -54,6 +54,9 @@ public sealed class CompletionRequest
     public int    Seed          { get; init; } = -1;
 
     // Thinking / extended reasoning
+    /// <summary>LM Studio reasoning effort: "off" | "low" | "medium" | "high" | "on". Empty = model default.</summary>
+    public string? ReasoningEffort { get; init; }
+    // Legacy thinking fields kept for backward compat
     public bool EnableThinking  { get; init; } = false;
     public int  ThinkingBudget  { get; init; } = 0;
     /// <summary>Token ID → logit bias (-100 to 100). Use to ban or boost specific tokens.</summary>
