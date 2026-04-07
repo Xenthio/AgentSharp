@@ -124,6 +124,8 @@ public sealed class ToolCallFunction
 public sealed class CompletionResponse
 {
     public string Content { get; init; } = string.Empty;
+    /// <summary>Reasoning/thinking content if the model returned it (e.g. Qwen3, DeepSeek R1 reasoning_content).</summary>
+    public string? ReasoningContent { get; init; }
     public List<ToolCall>? ToolCalls { get; init; }
     public required TokenUsage Usage { get; init; }
     public required string FinishReason { get; init; }

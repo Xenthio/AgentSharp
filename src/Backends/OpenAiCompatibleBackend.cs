@@ -58,6 +58,7 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
         return new CompletionResponse
         {
             Content = choice.Message?.Content?.ToString() ?? string.Empty,
+            ReasoningContent = choice.Message?.ReasoningContent,
             FinishReason = choice.FinishReason ?? "stop",
             Usage = new TokenUsage
             {
@@ -256,6 +257,8 @@ internal sealed class OaiMessage
 {
     [JsonPropertyName("role")] public required string Role { get; init; }
     [JsonPropertyName("content")] public required JsonNode? Content { get; init; }
+    /// <summary>reasoning_content field returned by Qwen3, DeepSeek R1, etc.</summary>
+    [JsonPropertyName("reasoning_content")] public string? ReasoningContent { get; init; }
 }
 
 internal sealed class OaiResponse
