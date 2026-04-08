@@ -221,7 +221,23 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
             {
                 content = m.Content;
             }
-            return new OaiMessage { Role = m.Role, Content = content };
+            var oaiMsg = new OaiMessage { Role = m.Role, Content = content, ToolCallId = m.ToolCallId, Name = m.Name };
+            // Include tool_calls for assistant messages that have them
+            if (m.ToolCalls != null && m.ToolCalls.Count > 0)
+            {
+                oaiMsg = new OaiMessage
+                {
+                    Role = m.Role,
+                    Content = content,
+                    ToolCalls = m.ToolCalls.Select(tc => new OaiToolCall
+                    {
+                        Id = tc.Id,
+                        Type = tc.Type,
+                        Function = new OaiToolCallFunction { Name = tc.Function.Name, Arguments = tc.Function.Arguments }
+                    }).ToArray()
+                };
+            }
+            return oaiMsg;
         }).ToArray(),
         MaxTokens   = request.MaxTokens,
         Temperature = request.Temperature,
@@ -240,6 +256,8 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
         EnableThinking = !string.IsNullOrEmpty(request.ReasoningEffort) ? null
             : request.EnableThinking ? null : (bool?)false,
         LogitBias      = request.LogitBias != null && request.LogitBias.Count > 0 ? request.LogitBias : null,
+        Tools          = request.Tools?.Select(t => (object)t).ToArray(),
+        ToolChoice     = request.Tools?.Count > 0 ? "auto" : null,
     };
 }
 
@@ -262,6 +280,8 @@ internal sealed class OaiRequest
     /// <summary>LM Studio reasoning setting: "off" | "low" | "medium" | "high" | "on"</summary>
     [JsonPropertyName("reasoning")]       public string? Reasoning { get; init; }
     [JsonPropertyName("logit_bias")]       public Dictionary<string, float>? LogitBias { get; init; }
+    [JsonPropertyName("tools")]            public object[]? Tools { get; init; }
+    [JsonPropertyName("tool_choice")]      public string? ToolChoice { get; init; }
 }
 
 internal sealed class OaiMessage
@@ -270,8 +290,12 @@ internal sealed class OaiMessage
     [JsonPropertyName("content")] public required JsonNode? Content { get; init; }
     /// <summary>reasoning_content field returned by Qwen3, DeepSeek R1, etc.</summary>
     [JsonPropertyName("reasoning_content")] public string? ReasoningContent { get; init; }
-    /// <summary>tool_calls from OpenAI-compatible APIs</summary>
+    /// <summary>tool_calls from OpenAI-compatible APIs (response)</summary>
     [JsonPropertyName("tool_calls")] public OaiToolCall[]? ToolCalls { get; init; }
+    /// <summary>tool_call_id for tool result messages</summary>
+    [JsonPropertyName("tool_call_id")] public string? ToolCallId { get; init; }
+    /// <summary>Name for tool result messages</summary>
+    [JsonPropertyName("name")] public string? Name { get; init; }
 }
 
 internal sealed class OaiResponse
