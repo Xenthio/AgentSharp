@@ -364,6 +364,8 @@ internal sealed class OaiToolCallFunction
 [JsonSerializable(typeof(OaiEmbeddingResponse))]
 [JsonSerializable(typeof(OaiToolCall))]
 [JsonSerializable(typeof(OaiToolCallFunction))]
+[JsonSerializable(typeof(AgentSharp.Core.Interfaces.ToolDefinition))]
+[JsonSerializable(typeof(AgentSharp.Core.Interfaces.FunctionDefinition))]
 [JsonSerializable(typeof(System.Text.Json.Nodes.JsonObject))]
 [JsonSerializable(typeof(System.Text.Json.Nodes.JsonArray))]
 [JsonSerializable(typeof(System.Text.Json.Nodes.JsonNode))]
