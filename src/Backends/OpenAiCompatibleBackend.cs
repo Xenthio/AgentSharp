@@ -256,7 +256,7 @@ public sealed class OpenAiCompatibleBackend : IBackendProvider
         EnableThinking = !string.IsNullOrEmpty(request.ReasoningEffort) ? null
             : request.EnableThinking ? null : (bool?)false,
         LogitBias      = request.LogitBias != null && request.LogitBias.Count > 0 ? request.LogitBias : null,
-        Tools          = request.Tools?.Select(t => (object)t).ToArray(),
+        Tools          = request.Tools?.Select(t => System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(t))).ToArray(),
         ToolChoice     = request.Tools?.Count > 0 ? "auto" : null,
     };
 }
@@ -280,7 +280,7 @@ internal sealed class OaiRequest
     /// <summary>LM Studio reasoning setting: "off" | "low" | "medium" | "high" | "on"</summary>
     [JsonPropertyName("reasoning")]       public string? Reasoning { get; init; }
     [JsonPropertyName("logit_bias")]       public Dictionary<string, float>? LogitBias { get; init; }
-    [JsonPropertyName("tools")]            public object[]? Tools { get; init; }
+    [JsonPropertyName("tools")]            public System.Text.Json.Nodes.JsonNode[]? Tools { get; init; }
     [JsonPropertyName("tool_choice")]      public string? ToolChoice { get; init; }
 }
 
